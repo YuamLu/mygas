@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Gas Tracker</title>
+
+    <!-- JetBrains Mono font -->
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        /* Global styles */
+        
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        .app-container {
+            max-width: 100%;
+            min-height: 100vh;
+            position: relative;
+            background: white;
+            padding: 20px;
+        }
+        /* Title styles */
+        
+        .title-container {
+            display: flex;
+            justify-content: center;
+            margin: 50px auto;
+        }
+        
+        .title {
+            max-width: 650px;
+            text-align: center;
+        }
+        
+        .title-bold,
+        .title-regular {
+            color: black;
+            font-size: 2.8rem;
+            font-weight: 700;
+            line-height: 1.3;
+        }
+        /* Search input styles */
+        
+        .search-container {
+            max-width: 684px;
+            margin: 30px auto;
+        }
+        
+        .search-input {
+            width: 100%;
+            height: 56px;
+            padding: 0 20px;
+            background: white;
+            border: 2px solid #807A7A;
+            border-radius: 16px;
+            box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
+            font-size: 24px;
+            font-family: 'JetBrains Mono', monospace;
+            color: black;
+            outline: none;
+        }
+        /* Chain icons */
+        
+        .chain-icons {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin: 30px auto;
+            max-width: 800px;
+        }
+        
+        .chain-icon {
+            width: 64px;
+            height: 64px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0 16px 16px 0;
+            cursor: pointer;
+            border-radius: 50%;
+            transition: transform 0.2s ease-in-out;
+        }
+        
+        .chain-icon:hover {
+            transform: scale(1.1);
+        }
+        /* Loading indicator */
+        
+        .loading {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 60px 0;
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(0, 0, 0, 0.1);
+            border-radius: 50%;
+            border-top-color: #000;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        
+        .loading-text {
+            font-size: 16px;
+            font-weight: 500;
+            color: #333;
+        }
+        
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+        /* Results container */
+        
+        .results-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: none;
+        }
+        /* Section styles */
+        
+        .section {
+            margin-bottom: 40px;
+        }
+        
+        .gas-chart-section {
+            margin-top: 40px;
+            margin-bottom: 80px;
+        }
+        
+        .section-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 30px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        .chart-container {
+            height: 300px;
+            border: 1px solid #eee;
+        }
+        /* Gas blocks */
+        
+        .gas-blocks {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+        }
+        
+        .gas-block {
+            border: 1px solid #eee;
+            padding: 20px;
+        }
+        
+        .gas-block-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .gas-block-icon {
+            margin-right: 8px;
+        }
+        
+        .gas-block h3 {
+            font-size: 18px;
+            font-weight: 700;
+            margin: 0;
+        }
+        
+        .gas {
+            font-size: 16px;
+            margin: 5px 0;
+        }
+        
+        .usd {
+            font-size: 14px;
+            color: #666;
+            margin: 5px 0;
+        }
+        /* Chain tabs */
+        
+        .chain-tabs {
+            display: flex;
+            flex-wrap: wrap;
+            border-bottom: 1px solid #eee;
+            margin-bottom: 20px;
+        }
+        
+        .chain-tab {
+            padding: 8px 16px;
+            margin-right: 8px;
+            margin-bottom: 8px;
+            background: none;
+            border: none;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            cursor: pointer;
+            color: #666;
+            transition: all 0.2s ease;
+        }
+        
+        .chain-tab.active {
+            border-bottom: 2px solid #5271FF;
+            color: #000;
+        }
+        
+        .chain-tab-content {
+            display: flex;
+            align-items: center;
+        }
+        
+        .chain-tab-icon {
+            margin-right: 6px;
+        }
+        /* Table styles */
+        
+        .table-container {
+            overflow-x: auto;
+        }
+        
+        .transaction-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .transaction-table th,
+        .transaction-table td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+            font-size: 14px;
+        }
+        
+        .transaction-table th {
+            font-weight: 500;
+        }
+        
+        .right-align {
+            text-align: right;
+        }
+        
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        .chain-with-icon {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        /* Transaction links */
+        
+        .transaction-table a {
+            color: #5271FF;
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+        
+        .transaction-table a:hover {
+            color: #3251DA;
+            text-decoration: underline;
+        }
+        /* Responsive styles */
+        
+        @media (max-width: 1024px) {
+            .title-bold,
+            .title-regular {
+                font-size: 2.4rem;
+            }
+            .search-input {
+                font-size: 18px;
+                height: 50px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .title-bold,
+            .title-regular {
+                font-size: 2rem;
+            }
+            .search-input {
+                font-size: 16px;
+                height: 45px;
+            }
+            .gas-blocks {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            }
+            .section-title {
+                font-size: 20px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .title-bold,
+            .title-regular {
+                font-size: 1.6rem;
+            }
+            .chain-icons {
+                gap: 5px;
+            }
+            .chain-icon {
+                width: 40px;
+                height: 40px;
+                margin: 0 5px 5px 0;
+            }
+            .gas-blocks {
+                grid-template-columns: 1fr 1fr;
+            }
+            .section-title {
+                font-size: 18px;
+            }
+            .chain-tab {
+                padding: 5px 10px;
+                font-size: 12px;
+            }
+            .transaction-table th,
+            .transaction-table td {
+                padding: 5px;
+                font-size: 12px;
+            }
+        }
+        /* Hide elements initially */
+        
+        .loading,
+        .results-container {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Title -->
+        <div class="title-container">
+            <div class="title">
+                <span class="title-bold">My Gas</span>
+                <span class="title-regular">: Calculate How Much Gas You Have Consumed</span>
+            </div>
+        </div>
+
+        <!-- Search Input -->
+        <div class="search-container">
+            <input type="text" id="addressInput" class="search-input" placeholder="Enter Address or ENS" />
+        </div>
+
+        <!-- Chain Icons -->
+        <div class="chain-icons">
+            <div class="chain-icon" data-chain="Ethereum">
+                <svg width="32" height="32" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M26 6.5V14.9105L38.1875 20.3618L26 6.5Z" fill="#8FFCF3"/>
+                    <path d="M26 6.5L13.8125 20.3597L26 14.9148V6.5Z" fill="#CABCF8"/>
+                    <path d="M26 28.63V45.5L38.1875 28.6346L26 35.7023Z" fill="#CBA7F5"/>
+                    <path d="M26 45.5V35.7023L13.8125 28.6346L26 45.5Z" fill="#74A0F3"/>
+                    <path d="M26 27.91V40.4317L38.1875 33.3618L26 27.9127V27.91Z" fill="#CBA7F5"/>
+                    <path d="M13.8125 33.3618L26 40.4317V27.9127L13.8125 33.3618Z" fill="#74A0F3"/>
+                    <path fill-rule="evenodd" clip-rule="evenodd" d="M26 33.4316L13.8125 26.3618L26 6.5L38.1853 26.3597L26 33.4316ZM14.6207 25.7877L25.8028 7.566V20.813L14.6207 25.7877ZM14.4538 26.2838L25.8028 21.242V32.864L14.4538 26.2838ZM26.1928 21.242V32.864L37.5332 26.2838L26.1928 21.242ZM26.1928 20.813L37.375 25.7877L26.1928 7.566V20.813Z" fill="#202699"/>
+                    <path fill-rule="evenodd" clip-rule="evenodd" d="M26 34.5464L13.8125 27.6239L26 44.5L38.1853 27.6217L26 34.5464ZM15.1775 28.8415L25.8028 34.8865V43.564L15.1775 28.8415ZM26.1928 34.8865V43.564L36.8203 28.8415L26.1928 34.8865Z" fill="#202699"/>
+                </svg>
+            </div>
+            <div class="chain-icon" data-chain="Arbitrum">
+                <svg width="32" height="32" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M9.78 17.3538V32.6418C9.78 33.6168 10.3133 34.5203 11.1692 35.0078L24.6133 42.654C25.0363 42.8933 25.514 43.019 26 43.019C26.486 43.019 26.9637 42.8933 27.3867 42.654L40.8265 35.0057C41.6845 34.5203 42.2132 33.619 42.2132 32.644V17.3517C42.2132 16.3767 41.6845 15.4732 40.8265 14.9878L27.3867 7.34166C26.9637 7.10242 26.486 6.97669 26 6.97669C25.514 6.97669 25.0363 7.10242 24.6133 7.34166L11.1692 14.99C10.7491 15.2254 10.3994 15.5685 10.156 15.984C9.91266 16.3995 9.78231 16.8723 9.7825 17.3538Z" fill="#213147"/>
+                    <path d="M26.97 14.964L25.014 20.1423C24.9618 20.2858 24.9618 20.443 25.014 20.5865L28.3138 29.4958L32.1272 27.327L27.549 14.964C27.5256 14.901 27.4835 14.8466 27.4283 14.8082C27.3731 14.7699 27.3075 14.7493 27.2402 14.7493C27.173 14.7493 27.1074 14.7699 27.0522 14.8082C26.997 14.8466 26.9549 14.901 26.9315 14.964ZM30.7752 6.25617C30.7518 6.19314 30.7096 6.13879 30.6545 6.1004C30.5993 6.06202 30.5336 6.04144 30.4664 6.04144C30.3992 6.04144 30.3336 6.06202 30.2784 6.1004C30.2232 6.13879 30.1811 6.19314 30.1577 6.25617L28.2402 11.4345C28.188 11.578 28.188 11.7352 28.2402 11.8787L33.6438 26.4647L37.4593 24.2958L30.7752 6.25617Z" fill="#12AAFF"/>
+                    <path d="M26 8.91583C26.0908 8.91939 26.184 8.94379 26.2687 8.98733L40.8178 17.2597C40.8998 17.3065 40.9681 17.3739 41.016 17.4552C41.0639 17.5365 41.0897 17.629 41.0908 17.7233V34.2658C41.0908 34.4587 40.9868 34.6342 40.8178 34.7295L26.2687 43.004C26.1854 43.0508 26.0912 43.0747 25.9957 43.0733C25.9014 43.0701 25.809 43.0465 25.7248 43.004L11.1757 34.7382C11.0934 34.6912 11.0249 34.6234 10.977 34.5417C10.9291 34.46 10.9035 34.3671 10.9027 34.2723V17.7277C10.9027 17.5348 11.0067 17.3593 11.1757 17.2618L25.7248 8.9895C25.8075 8.94249 25.9006 8.91715 25.9957 8.91583ZM26 6.5C25.48 6.5 24.96 6.63 24.4963 6.8965L9.95151 15.1667C9.49698 15.4225 9.11848 15.7943 8.85468 16.2443C8.59089 16.6942 8.45124 17.2061 8.45001 17.7277V34.2702C8.45001 35.3253 9.02201 36.3025 9.95151 36.829L24.4985 45.1035C24.9567 45.3621 25.4739 45.498 26 45.498C26.5261 45.498 27.0433 45.3621 27.5015 45.1035L42.0485 36.8312C42.503 36.5754 42.8815 36.2035 43.1453 35.7536C43.4091 35.3036 43.5488 34.7917 43.55 34.2702V17.7277C43.5488 17.2061 43.4091 16.6942 43.1453 16.2443C42.8815 15.7943 42.503 15.4225 42.0485 15.1667L27.4972 6.8965C27.0396 6.63628 26.5221 6.49964 26 6.5Z" fill="#9DCCED"/>
+                    <path d="M16.38 40.4842L17.7147 36.8745L20.41 39.0802L17.8902 41.3465L16.38 40.4842Z" fill="#213147"/>
+                    <path d="M21.77 6.54252H18.0838C17.9494 6.54107 17.8179 6.58134 17.7073 6.65779C17.5967 6.73423 17.5125 6.84308 17.4664 6.96935L9.56018 28.3153L13.3757 30.4842L22.0813 6.97802C22.0988 6.92872 22.1041 6.87595 22.0967 6.82418C22.0894 6.77241 22.0697 6.72317 22.0393 6.68064C22.0089 6.63811 21.9687 6.60354 21.9221 6.57987C21.8754 6.5562 21.8238 6.54197 21.77 6.54252ZM28.226 6.54252H24.5362C24.4021 6.54152 24.271 6.582 24.1609 6.65841C24.0507 6.73483 23.9669 6.84343 23.9208 6.96935L14.8923 31.3443L18.7078 33.511L28.5337 6.97802C28.551 6.9289 28.5564 6.87632 28.5491 6.82472C28.5419 6.77312 28.5224 6.72401 28.4923 6.68153C28.4621 6.63905 28.4222 6.60444 28.3758 6.58063C28.3295 6.55681 28.2781 6.54232 28.226 6.54252Z" fill="white"/>
+                </svg>
+            </div>
+            <div class="chain-icon" data-chain="Base">
+                <svg width="32" height="32" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M26 46C36.79 46 45.5 37.2683 45.5 26.5C45.5 15.7317 36.7553 7 25.9653 7C15.73 7 7.332 14.8585 6.5 24.862H32.3202V28.1402H6.5C7.33417 38.1415 15.73 46 26 46Z" fill="#0052FF"/>
+                </svg>
+            </div>
+            <div class="chain-icon" data-chain="Optimism">
+                <svg width="32" height="32" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path fill-rule="evenodd" clip-rule="evenodd" d="M6.593 28.2333C8.00711 29.2444 9.82133 29.75 12.0357 29.75C14.7137 29.75 16.8529 29.1448 18.4533 27.9343C20.0538 26.7065 21.1797 24.8562 21.8312 22.3833C22.2212 20.8666 22.5563 19.3045 22.8365 17.6968C22.9275 17.1219 22.9737 16.6431 22.9752 16.2603C22.9752 14.9979 22.6494 13.9152 21.998 13.0125C21.3266 12.0776 20.3943 11.3617 19.3178 10.9541C18.1825 10.4847 16.8991 10.25 15.4677 10.25C10.2041 10.25 6.93967 12.7322 5.67433 17.6968C5.28664 19.2491 4.94201 20.8119 4.64083 22.3833C4.55706 22.8672 4.51011 23.354 4.5 23.8436C4.5 25.7416 5.19767 27.2049 6.593 28.2333ZM16.668 22.2208C16.1328 24.2943 14.6617 25.6441 12.4257 25.6441C10.2157 25.6441 9.46167 24.1491 9.86033 22.2208C10.1377 20.7278 10.473 19.2461 10.8657 17.7791C11.4398 15.5388 12.794 14.3558 15.1037 14.3558C17.3072 14.3558 18.0243 15.8291 17.6452 17.7791C17.3714 19.2706 17.0454 20.7521 16.668 22.2208ZM25.1223 29.555C25.2321 29.685 25.3867 29.7493 25.586 29.7478H29.278C29.4669 29.7446 29.649 29.6765 29.7937 29.555C29.9548 29.4325 30.062 29.2523 30.0927 29.0523L31.2583 23.5923H35.0132C37.3835 23.5923 39.2382 22.444 40.5945 21.4213C41.9711 20.4001 42.8854 18.8213 43.3375 16.685C43.4458 16.1823 43.5 15.6984 43.5 15.2333C43.5 13.6199 42.8854 12.3849 41.6562 11.5283C40.4428 10.6746 38.8323 10.2478 36.8245 10.2478H29.603C29.4138 10.2516 29.2317 10.3205 29.0873 10.4428C28.9295 10.5681 28.8231 10.747 28.7883 10.9455L25.04 29.0501C25.0192 29.1352 25.0157 29.2235 25.0299 29.3099C25.044 29.3963 25.0755 29.4811 25.1223 29.555ZM38.3173 16.6265C37.9772 18.1193 36.6772 19.4843 35.1497 19.4843H32.0297L33.1043 14.3515H36.3608C37.4702 14.3515 38.3975 14.5725 38.3975 15.7923C38.3975 16.0306 38.3708 16.3087 38.3173 16.6265Z" fill="#FE0420"/>
+                </svg>
+            </div>
+            <div class="chain-icon" data-chain="BSC">
+                <svg width="32" height="32" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M15.3617 14.4692L26 8.5L36.6383 14.4692L32.7383 16.6792L26 12.9092L19.2725 16.6792L15.3617 14.4692ZM36.6383 22.0092L32.7383 19.7992L26 23.5692L19.2725 19.7992L15.3617 22.0092V26.4183L22.0783 30.1883V37.7175L26 39.9275L29.9108 37.7175V30.1883L36.6383 26.4183V22.0092ZM36.6383 33.9583V29.5383L32.7383 31.7483V36.1575L36.6383 33.9583ZM39.4225 35.5183L32.695 39.2775V43.6975L43.3333 37.7175V25.7792L39.4225 27.9783V35.5183ZM35.5117 18.2392L39.4117 20.4492V24.8583L43.3333 22.6592V18.2392L39.4225 16.0292L35.5117 18.25V18.2392ZM22.0783 40.8808V45.29L26 47.5L29.9108 45.29V40.8917L26 43.0908L22.0892 40.8808H22.0783ZM15.3617 33.9475L19.2617 36.1575V31.7483L15.3617 29.5383V33.9583V33.9475ZM22.0783 18.2392L26 20.4492L29.9108 18.2392L26 16.0292L22.0892 18.25L22.0783 18.2392ZM12.5775 20.4492L16.4883 18.2392L12.5883 16.0292L8.66669 18.25V22.67L12.5775 24.8692V20.4492ZM12.5775 27.9783L8.66669 25.7792V37.7175L19.305 43.6975V39.2667L12.5883 35.5075V27.9675L12.5775 27.9783Z" fill="#F0B90B"/>
+                </svg>
+            </div>
+            <div class="chain-icon" data-chain="Polygon">
+                <svg width="32" height="32" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M35.4553 32.9701L44.707 27.6943C44.9462 27.5567 45.1452 27.3589 45.2844 27.1206C45.4235 26.8823 45.4978 26.6117 45.5 26.3358V15.782C45.5 15.5056 45.4266 15.2342 45.2873 14.9955C45.1479 14.7568 44.9477 14.5594 44.707 14.4235L35.4553 9.14764C35.2137 9.01012 34.9404 8.93781 34.6623 8.93781C34.3843 8.93781 34.111 9.01012 33.8693 9.14764L24.6177 14.4235C24.377 14.5594 24.1767 14.7568 24.0374 14.9955C23.8981 15.2342 23.8247 15.5056 23.8247 15.782V34.6406L17.3377 38.3391L10.8507 34.6406V27.2415L17.3377 23.543L21.6147 25.9848V21.021L18.1307 19.032C17.8883 18.8965 17.6153 18.8253 17.3377 18.8253C17.06 18.8253 16.787 18.8965 16.5447 19.032L7.293 24.3078C7.05232 24.4437 6.85207 24.6411 6.71274 24.8798C6.5734 25.1185 6.49999 25.3899 6.5 25.6663V36.218C6.5 36.777 6.80333 37.297 7.293 37.5765L16.5447 42.8545C16.787 42.99 17.06 43.0611 17.3377 43.0611C17.6153 43.0611 17.8883 42.99 18.1307 42.8545L27.3823 37.5765C27.6227 37.4408 27.8227 37.2437 27.9621 37.0054C28.1014 36.7671 28.175 36.4962 28.1753 36.2201V17.3593L28.2902 17.2943L34.6602 13.6608L41.1472 17.3593V24.7585L34.6602 28.457L30.3875 26.0216V30.9855L33.8672 32.9701C34.1095 33.1056 34.3825 33.1768 34.6602 33.1768C34.9378 33.1768 35.213 33.1056 35.4553 32.9701Z" fill="url(#paint0_linear_1_42)"/>
+                    <defs>
+                        <linearGradient id="paint0_linear_1_42" x1="6.37433" y1="37.2536" x2="43.5912" y2="15.3855" gradientUnits="userSpaceOnUse">
+                            <stop stop-color="#A726C1"/>
+                            <stop offset="0.88" stop-color="#803BDF"/>
+                            <stop offset="1" stop-color="#7B3FE4"/>
+                        </linearGradient>
+                    </defs>
+                </svg>
+            </div>
+            <div class="chain-icon" data-chain="zkSync">
+                <svg width="32" height="32" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path fill-rule="evenodd" clip-rule="evenodd" d="M45.5 26L34.437 16.2543V23.3957L23.452 30.5413L34.437 30.5457V35.75L45.5 26ZM6.5 26L17.563 35.75V28.6802L28.47 21.5302L17.5673 21.5258V16.25L6.5 26Z" fill="black"/>
+                </svg>
+            </div>
+            <div class="chain-icon" data-chain="Linea">
+                <svg width="32" height="32" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M31.2048 45.5H0.535645V12.8288H7.55131V39.169H31.2048V45.5ZM31.207 19.1555C34.6628 19.1555 37.4665 16.3237 37.4665 12.8288C37.4665 9.334 34.6628 6.5 31.2048 6.5C27.749 6.5 24.9475 9.334 24.9475 12.8267C24.9475 16.3237 27.749 19.1555 31.207 19.1555Z" fill="black"/>
+                </svg>
+            </div>
+        </div>
+
+        <!-- Loading Indicator -->
+        <div class="loading" id="loadingIndicator">
+            <div class="spinner"></div>
+            <div class="loading-text">Gathering Data On Chain...</div>
+        </div>
+
+        <!-- Results -->
+        <div class="results-container" id="resultsContainer">
+            <!-- Gas Consumption Chart -->
+            <div class="section gas-chart-section">
+                <h2 class="section-title">Gas Consumption (Last 3 Months)</h2>
+                <div class="chart-container">
+                    <canvas id="gasChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Gas Blocks -->
+            <div class="section">
+                <h2 class="section-title">Gas Consumption by Chain</h2>
+                <div class="gas-blocks" id="gasBlocks">
+                    <!-- Gas blocks will be generated by JavaScript -->
+                </div>
+            </div>
+
+            <!-- Transactions Table with Chain Tabs -->
+            <div class="section">
+                <h2 class="section-title">Recent Transactions</h2>
+
+                <!-- Chain Tabs -->
+                <div class="chain-tabs" id="chainTabs">
+                    <button class="chain-tab active" data-chain="All Chains">All Chains</button>
+                    <!-- Other chain tabs will be generated by JavaScript -->
+                </div>
+
+                <!-- Transaction Table -->
+                <div class="table-container">
+                    <table class="transaction-table">
+                        <thead id="tableHead">
+                            <tr>
+                                <th>Chain</th>
+                                <th>Transaction</th>
+                                <th>Time</th>
+                                <th class="right-align">Token</th>
+                                <th class="right-align">USD</th>
+                            </tr>
+                        </thead>
+                        <tbody id="transactionsTable">
+                            <!-- Transactions will be generated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Get references to DOM elements
+        const addressInput = document.getElementById('addressInput');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const resultsContainer = document.getElementById('resultsContainer');
+        const gasBlocks = document.getElementById('gasBlocks');
+        const chainTabs = document.getElementById('chainTabs');
+        const tableHead = document.getElementById('tableHead');
+        const transactionsTable = document.getElementById('transactionsTable');
+        const chainIcons = document.querySelectorAll('.chain-icon');
+
+        let activeChain = 'All Chains';
+        let gasChart;
+        let currentData; // Variable to store the current data
+
+        // Add event listener to address input
+        addressInput.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                const address = addressInput.value.trim();
+                if (address) {
+                    // Show loading indicator
+                    loadingIndicator.style.display = 'flex';
+                    resultsContainer.style.display = 'none';
+
+                    // Make API call to fetch data
+                    fetch('/api/gas?address=' + encodeURIComponent(address))
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error('Network response was not ok');
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            currentData = data; // Store the data
+                            displayResults(data);
+                        })
+                        .catch(error => {
+                            console.error('Error fetching data:', error);
+                            loadingIndicator.style.display = 'none';
+                            alert('Error fetching data. Please try again.');
+                        });
+                }
+            }
+        });
+
+        // Functions to render the results
+        function displayResults(data) {
+            // Hide loading indicator and show results
+            loadingIndicator.style.display = 'none';
+            resultsContainer.style.display = 'block';
+
+            // Render chart
+            renderGasChart(data.dailyGas);
+
+            // Render gas blocks
+            renderGasBlocks(data.gasBlocks);
+
+            // Set up chain tabs
+            setupChainTabs(data.transactions);
+
+            // Render transactions for the active chain
+            renderTransactions(data.transactions, activeChain);
+
+            // Add event listeners to chain icons
+            chainIcons.forEach(icon => {
+                icon.addEventListener('click', function() {
+                    const chain = this.getAttribute('data-chain');
+                    if (data.transactions[chain]) {
+                        setActiveChain(chain);
+                        renderTransactions(data.transactions, chain);
+                    }
+                });
+            });
+        }
+
+        function renderGasChart(dailyGas) {
+            const ctx = document.getElementById('gasChart').getContext('2d');
+
+            // Destroy previous chart if exists
+            if (gasChart) {
+                gasChart.destroy();
+            }
+
+            // Format data for Chart.js
+            const dates = dailyGas.map(item => {
+                const date = new Date(item.date);
+                return `${date.getMonth() + 1}/${date.getDate()}`;
+            });
+
+            const tokenValues = dailyGas.map(item => item.token_amount);
+            const usdValues = dailyGas.map(item => item.usd);
+
+            // Get token symbol from first entry (or default to Gwei)
+            const tokenSymbol = dailyGas.length > 0 ? dailyGas[0].token_symbol : 'Gwei';
+
+            // Create chart
+            gasChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: dates,
+                    datasets: [{
+                        label: tokenSymbol,
+                        data: tokenValues,
+                        borderColor: '#5271FF',
+                        backgroundColor: 'rgba(82, 113, 255, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.1,
+                        pointRadius: 0,
+                        pointHoverRadius: 6
+                    }, {
+                        label: 'USD Value',
+                        data: usdValues,
+                        borderColor: '#888888',
+                        backgroundColor: 'rgba(136, 136, 136, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.1,
+                        pointRadius: 0,
+                        pointHoverRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.dataset.label || '';
+                                    const value = context.parsed.y;
+                                    if (label === tokenSymbol) {
+                                        return `${label}: ${value.toFixed(9)}`;
+                                    } else {
+                                        return `${label}: $${value.toFixed(2)}`;
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        },
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderGasBlocks(blocks) {
+            gasBlocks.innerHTML = '';
+
+            blocks.forEach(block => {
+                const blockElement = document.createElement('div');
+                blockElement.className = 'gas-block';
+
+                // Get the chain SVG
+                const chainIcon = getChainSVG(block.chain);
+
+                blockElement.innerHTML = `
+                    <div class="gas-block-header">
+                        <div class="gas-block-icon">${chainIcon}</div>
+                        <h3>${block.chain}</h3>
+                    </div>
+                    <p class="gas">${block.token_amount.toFixed(9)} ${block.token_symbol}</p>
+                    <p class="usd">$${block.usd.toFixed(2)} USD</p>
+                `;
+
+                gasBlocks.appendChild(blockElement);
+            });
+        }
+
+        function setupChainTabs(transactions) {
+            // Clear existing tabs except "All Chains"
+            const allChainsTab = chainTabs.querySelector('[data-chain="All Chains"]');
+            chainTabs.innerHTML = '';
+            chainTabs.appendChild(allChainsTab);
+
+            // Add tabs for each chain
+            Object.keys(transactions).forEach(chain => {
+                if (chain !== 'All Chains') {
+                    const tabElement = document.createElement('button');
+                    tabElement.className = 'chain-tab';
+                    tabElement.setAttribute('data-chain', chain);
+
+                    // Get chain SVG
+                    const chainIcon = getChainSVG(chain);
+
+                    tabElement.innerHTML = `
+                        <div class="chain-tab-content">
+                            <div class="chain-tab-icon">${chainIcon}</div>
+                            <span>${chain}</span>
+                        </div>
+                    `;
+
+                    tabElement.addEventListener('click', function() {
+                        setActiveChain(chain);
+                        renderTransactions(transactions, chain);
+                    });
+
+                    chainTabs.appendChild(tabElement);
+                }
+            });
+
+            // Set "All Chains" as active
+            allChainsTab.addEventListener('click', function() {
+                setActiveChain('All Chains');
+                renderTransactions(transactions, 'All Chains');
+            });
+        }
+
+        function setActiveChain(chain) {
+            activeChain = chain;
+
+            // Update tab classes
+            document.querySelectorAll('.chain-tab').forEach(tab => {
+                if (tab.getAttribute('data-chain') === chain) {
+                    tab.classList.add('active');
+                } else {
+                    tab.classList.remove('active');
+                }
+            });
+
+            // Update table header
+            const headerRow = tableHead.querySelector('tr');
+            headerRow.innerHTML = activeChain === 'All Chains' ?
+                `<th>Chain</th><th>Transaction</th><th>Time</th><th class="right-align">Token</th><th class="right-align">USD</th>` :
+                `<th>Transaction</th><th>Time</th><th class="right-align">Token</th><th class="right-align">USD</th>`;
+        }
+
+        function renderTransactions(transactions, chain) {
+            transactionsTable.innerHTML = '';
+
+            if (!transactions[chain]) {
+                return;
+            }
+
+            // Create a copy of the transactions array to avoid modifying the original data
+            let txList = [...transactions[chain]];
+
+            // Sort transactions by time if viewing "All Chains"
+            if (chain === 'All Chains') {
+                txList.sort((a, b) => {
+                    // Convert time strings to Date objects for comparison
+                    const dateA = new Date(a.time.replace(' ', 'T'));
+                    const dateB = new Date(b.time.replace(' ', 'T'));
+                    // Sort in descending order (newest first)
+                    return dateB - dateA;
+                });
+            }
+
+            txList.forEach(tx => {
+                const row = document.createElement('tr');
+
+                // Create transaction link with explorer URL
+                const txLink = `<a href="${tx.explorer_url}" target="_blank" class="mono">${tx.tx.substring(0, 10)}...${tx.tx.slice(-4)}</a>`;
+                const tokenDisplay = `${tx.token_amount.toFixed(9)} ${tx.token_symbol}`;
+
+                if (chain === 'All Chains') {
+                    // Get chain SVG
+                    const chainIcon = getChainSVG(tx.chain);
+
+                    row.innerHTML = `
+                        <td>
+                            <div class="chain-with-icon">
+                                <div>${chainIcon}</div>
+                                <span>${tx.chain}</span>
+                            </div>
+                        </td>
+                        <td>${txLink}</td>
+                        <td>${tx.time}</td>
+                        <td class="right-align">${tokenDisplay}</td>
+                        <td class="right-align">$${tx.usd.toFixed(2)}</td>
+                    `;
+                } else {
+                    row.innerHTML = `
+                        <td>${txLink}</td>
+                        <td>${tx.time}</td>
+                        <td class="right-align">${tokenDisplay}</td>
+                        <td class="right-align">$${tx.usd.toFixed(2)}</td>
+                    `;
+                }
+
+                transactionsTable.appendChild(row);
+            });
+        }
+
+        // Helper to get chain SVG icon
+        function getChainSVG(chain) {
+            // Find chain icon element and get its SVG content
+            const iconElement = Array.from(document.querySelectorAll('.chain-icon')).find(el =>
+                el.getAttribute('data-chain') === chain
+            );
+
+            if (iconElement) {
+                const svgElement = iconElement.querySelector('svg');
+                if (svgElement) {
+                    return svgElement.outerHTML.replace('width="32" height="32"', 'width="24" height="24"');
+                }
+            }
+
+            return '';
+        }
+
+        // Add click event listeners to chain icons for filtering
+        document.querySelectorAll('.chain-icon').forEach(icon => {
+            icon.addEventListener('click', function() {
+                if (resultsContainer.style.display === 'block') {
+                    const chain = this.getAttribute('data-chain');
+                    if (chainTabs.querySelector(`[data-chain="${chain}"]`)) {
+                        setActiveChain(chain);
+                        renderTransactions(currentData.transactions, chain);
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>
