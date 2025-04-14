@@ -55,6 +55,19 @@ instance/
 .webassets-cache
 
 # Test files
-test_ens.py
-test_gas_calculation.py
+test_*.py
+*_test.py
+test/
+tests/
+
+# JSON test data and response files
+*_tx.json
+*_txs.json
+*_transactions.json
+*_recent_txs.json
+response.json
 transaction_response.json
+
+# Development artifacts
+.sass-cache/
+node_modules/
